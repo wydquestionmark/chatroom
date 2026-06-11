@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PROTOCHAT 1983</title>
+
+  <style>
+    :root {
+      --green: #00ff66;
+      --bg: #020403;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: #111;
+      color: var(--green);
+      font-family: "Courier New", monospace;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .monitor {
+      width: 95vw;
+      max-width: 1100px;
+      height: 90vh;
+      background: #6f6861;
+      border: 22px solid #8a8178;
+      border-radius: 8px;
+      padding: 24px;
+      box-shadow: inset 0 0 35px #222, 0 0 60px #000;
+    }
+
+    .screen {
+      height: 100%;
+      background:
+        radial-gradient(circle at 70% 20%, rgba(255,255,255,0.18), transparent 18%),
+        linear-gradient(rgba(255,255,255,0.03) 50%, rgba(0,0,0,0.08) 50%),
+        #020403;
+      background-size: 100% 100%, 100% 4px, 100% 100%;
+      border-radius: 4px;
+      padding: 24px;
+      overflow: hidden;
+      box-shadow: inset 0 0 45px #000;
+      text-shadow: 0 0 6px currentColor;
+      filter: blur(0.2px);
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    h1, p {
+      margin: 0 0 12px;
+      font-size: 18px;
+      font-weight: normal;
+    }
+
+    input, button, select {
+      background: transparent;
+      border: none;
+      color: currentColor;
+      font-family: inherit;
+      font-size: 18px;
+      outline: none;
+      text-shadow: 0 0 6px currentColor;
+    }
+
+    input {
+      border-bottom: 1px solid currentColor;
+      width: 260px;
+    }
+
+    button {
+      cursor: pointer;
+      border: 1px solid currentColor;
+      padding: 6px 12px;
+      margin-top: 12px;
+    }
+
+    button:hover {
+      background: currentColor;
+      color: #000;
+    }
+
+    .chat {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .chat-log {
+      flex: 1;
+      overflow-y: auto;
+      padding-right: 12px;
+      white-space: pre-wrap;
+    }
+
+    .message {
+      margin-bottom: 8px;
+      line-height: 1.35;
+    }
+
+    .chat-input {
+      display: flex;
+      gap: 8px;
+      border-top: 1px dashed currentColor;
+      padding-top: 12px;
+    }
+
+    .chat-input input {
+      flex: 1;
+      border-bottom: none;
+    }
+
+    .cursor::after {
+      content: "█";
+      animation: blink 1s steps(1) infinite;
+    }
+
+    @keyframes blink {
+      50% { opacity: 0; }
+    }
+
+    .white { color: #ffffff; }
+    .pink { color: #ff66cc; }
+    .yellow { color: #ffff66; }
+    .green { color: #00ff66; }
+  </style>
+</head>
+
+<body>
+  <div class="monitor">
+    <div class="screen" id="screen">
+
+      <section id="login">
+        <h1>(C) PROTOCHAT SYSTEMS 1976 - 1983</h1>
+        <p>LAST LOGIN: 14/04/83 23:36</p>
+        <p>-----------------------------</p>
+        <p>CREATE USER PROFILE</p>
+        <p>-----------------------------</p>
+
+        <p>ENTER USERNAME:</p>
+        <input id="username" maxlength="18" autofocus />
+
+        <p style="margin-top:16px;">CHOOSE TEXT COLOR:</p>
+        <select id="color">
+          <option value="green">GREEN</option>
+          <option value="white">WHITE</option>
+          <option value="pink">PINK</option>
+          <option value="yellow">YELLOW</option>
+        </select>
+
+        <br />
+        <button id="enterBtn">ENTER CHATROOM</button>
+      </section>
+
+      <section id="chatroom" class="chat hidden">
+        <div>
+          <p>(C) PROTOCHAT PUBLIC CHANNEL</p>
+          <p>TYPE MESSAGE BELOW. TYPE @CHATBOT TO SUMMON SYSTEM AI.</p>
+          <p>------------------------------------------------------</p>
+        </div>
+
+        <div id="chatLog" class="chat-log"></div>
+
+        <form id="chatForm" class="chat-input">
+          <span>&gt;</span>
+          <input id="messageInput" autocomplete="off" maxlength="280" />
+          <button>SEND</button>
+        </form>
+      </section>
+
+    </div>
+  </div>
+
+  <script type="module">
+    /*
+      To make this real-time online:
+      1. Create a Firebase project
+      2. Enable Realtime Database
+      3. Replace the config below
+    */
+
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import {
+      getDatabase,
+      ref,
+      push,
+      onChildAdded,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "PASTE_YOUR_KEY_HERE",
+      authDomain: "PASTE_YOUR_PROJECT.firebaseapp.com",
+      databaseURL: "https://PASTE_YOUR_PROJECT.firebaseio.com",
+      projectId: "PASTE_YOUR_PROJECT",
+      storageBucket: "PASTE_YOUR_PROJECT.appspot.com",
+      messagingSenderId: "PASTE_SENDER_ID",
+      appId: "PASTE_APP_ID"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const messagesRef = ref(db, "messages");
+
+    const login = document.getElementById("login");
+    const chatroom = document.getElementById("chatroom");
+    const usernameInput = document.getElementById("username");
+    const colorSelect = document.getElementById("color");
+    const enterBtn = document.getElementById("enterBtn");
+    const chatLog = document.getElementById("chatLog");
+    const chatForm = document.getElementById("chatForm");
+    const messageInput = document.getElementById("messageInput");
+
+    let currentUser = "";
+    let currentColor = "green";
+
+    const bannedWords = [
+      "badword1",
+      "badword2",
+      "badword3"
+    ];
+
+    function censor(text) {
+      let clean = text;
+      bannedWords.forEach(word => {
+        const regex = new RegExp(word, "gi");
+        clean = clean.replace(regex, "*".repeat(word.length));
+      });
+      return clean;
+    }
+
+    enterBtn.addEventListener("click", () => {
+      const name = usernameInput.value.trim();
+
+      if (!name) {
+        alert("ENTER USERNAME");
+        return;
+      }
+
+      currentUser = name;
+      currentColor = colorSelect.value;
+
+      login.classList.add("hidden");
+      chatroom.classList.remove("hidden");
+      chatroom.className = `chat ${currentColor}`;
+
+      messageInput.focus();
+
+      push(messagesRef, {
+        user: "SYSTEM",
+        text: `${currentUser} HAS ENTERED THE CHATROOM.`,
+        color: "green",
+        createdAt: serverTimestamp()
+      });
+    });
+
+    chatForm.addEventListener("submit", event => {
+      event.preventDefault();
+
+      const text = messageInput.value.trim();
+      if (!text) return;
+
+      push(messagesRef, {
+        user: currentUser,
+        text: censor(text),
+        color: currentColor,
+        createdAt: serverTimestamp()
+      });
+
+      if (text.toLowerCase().includes("@chatbot")) {
+        setTimeout(() => {
+          push(messagesRef, {
+            user: "CHATBOT",
+            text: "SYSTEM AI ONLINE. ASK ME A QUESTION.",
+            color: "yellow",
+            createdAt: serverTimestamp()
+          });
+        }, 700);
+      }
+
+      messageInput.value = "";
+    });
+
+    onChildAdded(messagesRef, snapshot => {
+      const msg = snapshot.val();
+
+      const div = document.createElement("div");
+      div.className = `message ${msg.color || "green"}`;
+      div.textContent = `[${msg.user}] ${msg.text}`;
+
+      chatLog.appendChild(div);
+      chatLog.scrollTop = chatLog.scrollHeight;
+    });
+  </script>
+</body>
+</html>
