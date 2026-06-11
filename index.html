@@ -225,18 +225,53 @@
     let currentColor = "green";
 
     const bannedWords = [
-      "badword1",
-      "badword2",
-      "badword3"
+      "fuck", "shit", "bitch", "asshole", "dick", "piss",
+      "bastard", "crap", "damn", "slut", "whore"
     ];
 
     function censor(text) {
       let clean = text;
+
       bannedWords.forEach(word => {
-        const regex = new RegExp(word, "gi");
-        clean = clean.replace(regex, "*".repeat(word.length));
+        const regex = new RegExp(`\\b${word}\\b`, "gi");
+        clean = clean.replace(regex, "$%#%$#");
       });
+
       return clean;
+    }
+
+    function chatbotReply(text) {
+      const question = text.replace(/@chatbot/gi, "").trim().toLowerCase();
+
+      if (!question) {
+        return "SYSTEM AI ONLINE. ASK ME A QUESTION.";
+      }
+
+      if (question.includes("hello") || question.includes("hi")) {
+        return "HELLO. I AM LISTENING.";
+      }
+
+      if (question.includes("who are you")) {
+        return "I AM THE PROTOCHAT SYSTEM AI.";
+      }
+
+      if (question.includes("time")) {
+        return "TIME IS A HUMAN CONSTRUCT. ALSO, CHECK YOUR SYSTEM CLOCK.";
+      }
+
+      if (question.includes("help")) {
+        return "TYPE @CHATBOT FOLLOWED BY A QUESTION.";
+      }
+
+      if (question.includes("rules")) {
+        return "RULES: BE CIVIL. NO HOSTILE INPUT. SYSTEM MODERATION ACTIVE.";
+      }
+
+      if (question.includes("name")) {
+        return "YOU MAY CALL ME CHATBOT.";
+      }
+
+      return "QUERY RECEIVED. MY 1983 PROCESSOR IS THINKING ABOUT IT.";
     }
 
     enterBtn.addEventListener("click", () => {
@@ -247,7 +282,7 @@
         return;
       }
 
-      currentUser = name;
+      currentUser = censor(name);
       currentColor = colorSelect.value;
 
       login.classList.add("hidden");
@@ -270,9 +305,11 @@
       const text = messageInput.value.trim();
       if (!text) return;
 
+      const cleanText = censor(text);
+
       push(messagesRef, {
         user: currentUser,
-        text: censor(text),
+        text: cleanText,
         color: currentColor,
         createdAt: serverTimestamp()
       });
@@ -281,7 +318,7 @@
         setTimeout(() => {
           push(messagesRef, {
             user: "CHATBOT",
-            text: "SYSTEM AI ONLINE. ASK ME A QUESTION.",
+            text: censor(chatbotReply(text)),
             color: "yellow",
             createdAt: serverTimestamp()
           });
