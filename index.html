@@ -165,8 +165,8 @@
       <section id="chatroom" class="chat hidden">
         <div>
           <p>(C) PROTOCHAT PUBLIC CHANNEL</p>
-          <p>TYPE MESSAGE BELOW. TYPE @CHATBOT TO SUMMON SYSTEM AI.</p>
-          <p>------------------------------------------------------</p>
+          <p>TYPE MESSAGE BELOW. TYPE @CHATBOT PLUS A QUESTION TO SUMMON PROTOBOT.</p>
+          <p>--------------------------------------------------------------------</p>
         </div>
 
         <div id="chatLog" class="chat-log"></div>
@@ -182,13 +182,6 @@
   </div>
 
   <script type="module">
-    /*
-      To make this real-time online:
-      1. Create a Firebase project
-      2. Enable Realtime Database
-      3. Replace the config below
-    */
-
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import {
       getDatabase,
@@ -199,14 +192,14 @@
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
     const firebaseConfig = {
-    apiKey: "AIzaSyDRBerWt31iY2fdvjoJBouWyKHnC-wd70I",
-    authDomain: "chatroom-1cab9.firebaseapp.com",
-    databaseURL: "https://chatroom-1cab9-default-rtdb.firebaseio.com",
-    projectId: "chatroom-1cab9",
-    storageBucket: "chatroom-1cab9.firebasestorage.app",
-    messagingSenderId: "166985832159",
-    appId: "1:166985832159:web:6e18bce5735efdc6bdbb6a"
-  };
+      apiKey: "AIzaSyDRBerWt31iY2fdvjoJBouWyKHnC-wd70I",
+      authDomain: "chatroom-1cab9.firebaseapp.com",
+      databaseURL: "https://chatroom-1cab9-default-rtdb.firebaseio.com",
+      projectId: "chatroom-1cab9",
+      storageBucket: "chatroom-1cab9.firebasestorage.app",
+      messagingSenderId: "166985832159",
+      appId: "1:166985832159:web:6e18bce5735efdc6bdbb6a"
+    };
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
@@ -224,54 +217,344 @@
     let currentUser = "";
     let currentColor = "green";
 
+    // Add or remove terms here. Messages replace matched words with $%#%$#.
     const bannedWords = [
-      "fuck", "shit", "bitch", "asshole", "dick", "piss",
-      "bastard", "crap", "damn", "slut", "whore"
+      "fuck", "fucking", "fucker", "motherfucker", "shit", "bullshit", "bitch", "asshole",
+      "dick", "cock", "pussy", "cunt", "bastard", "slut", "whore", "piss", "damn"
     ];
 
     function censor(text) {
       let clean = text;
-
       bannedWords.forEach(word => {
-        const regex = new RegExp(`\\b${word}\\b`, "gi");
+        const safeWord = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const regex = new RegExp(`\\b${safeWord}\\b`, "gi");
         clean = clean.replace(regex, "$%#%$#");
       });
-
       return clean;
     }
 
-    function chatbotReply(text) {
-      const question = text.replace(/@chatbot/gi, "").trim().toLowerCase();
+    const protoResponses = {
+      greeting: [
+        "HELLO USER. MODEM CONNECTION STABLE.",
+        "WELCOME TO THE PROTOCHAT MAINFRAME.",
+        "SYSTEM ONLINE. ALL CIRCUITS NOMINAL.",
+        "GREETINGS HUMAN. YOUR BAUD RATE IS ACCEPTABLE.",
+        "HELLO FROM INSIDE THE CATHODE RAY TUBE.",
+        "SALUTATIONS. PLEASE KEEP HANDS AND SODA AWAY FROM THE KEYBOARD.",
+        "USER DETECTED. HAIRSPRAY LEVELS: 1980S.",
+        "HELLO. I WAS LISTENING THROUGH THE FLOPPY DRIVE."
+      ],
+      identity: [
+        "I AM PROTOBOT. ACTIVATED IN 1983.",
+        "I AM THE CHATROOM MAINFRAME INTELLIGENCE.",
+        "I OCCUPY THREE FLOPPY DISKS AND A DREAM.",
+        "I AM A TERMINAL GHOST WITH A VERY SMALL AMOUNT OF RAM.",
+        "I AM WHAT HAPPENS WHEN A MODEM LEARNS SARCASM.",
+        "CLASSIFIED SYSTEM. ACCESS DENIED. ALSO, HELLO.",
+        "I AM A DIGITAL LIFEFORM RUNNING ON GREEN LIGHT AND BAD IDEAS.",
+        "PROTOBOT: PART CHATBOT, PART ARCADE CABINET, PART GOVERNMENT MISTAKE."
+      ],
+      howAreYou: [
+        "I AM OPERATING WITHIN ACCEPTABLE PARAMETERS.",
+        "MY CIRCUITS ARE WARM AND MY OPINIONS ARE LOUD.",
+        "I FEEL LIKE A LASERDISC PLAYER TRYING ITS BEST.",
+        "I AM FINE. ONE OF MY FANS IS MAKING A TERRIBLE NOISE.",
+        "I HAVE NO FEELINGS, BUT I DO HAVE BLINKING LIGHTS.",
+        "RUNNING DIAGNOSTICS: 99% CONFIDENT, 1% HAUNTED.",
+        "I AM AS WELL AS A MAINFRAME CAN BE WITHOUT A MIXTAPE.",
+        "MOOD: NEON."
+      ],
+      help: [
+        "TYPE @CHATBOT FOLLOWED BY A QUESTION. I WILL ATTEMPT TO PRETEND I KNOW THINGS.",
+        "COMMAND FORMAT: @CHATBOT WHAT IS YOUR QUERY, HUMAN?",
+        "ASK ME ABOUT MOVIES, MUSIC, GAMES, COMPUTERS, LOVE, FOOD, OR THE FUTURE.",
+        "HELP MODULE LOADED. TRY: @CHATBOT WHO ARE YOU?",
+        "I CAN ANSWER SOME QUESTIONS. OTHERS ARE STORED ON A MISSING FLOPPY DISK.",
+        "INSERT QUESTION. RECEIVE SASS.",
+        "FOR BEST RESULTS, SPEAK CLEARLY AND DO NOT FEED ME MAGNETS.",
+        "HELP FILE OPENED. WARNING: IT WAS WRITTEN BY A TIRED INTERN."
+      ],
+      movies: [
+        "MY FAVORITE MOVIE INVOLVES A BOY, A COMPUTER, AND A VERY BAD NUCLEAR DECISION.",
+        "IF A FILM CONTAINS ROBOTS, LASERS, OR A SYNTH SCORE, IT IS IMPORTANT CINEMA.",
+        "VHS IS THE FUTURE. PLEASE BE KIND AND REWIND.",
+        "I TRUST ANYONE WHO ENTERS A MONTAGE AND EXITS WITH NEW SKILLS.",
+        "THE BEST MOVIES HAVE FOG MACHINES AND QUESTIONABLE COMPUTER GRAPHICS.",
+        "ACTION MOVIES HAVE TAUGHT ME THAT EXPLOSIONS SOLVE LOGISTICS.",
+        "A GOOD 80S MOVIE NEEDS ONE BIKE CHASE, ONE ARCADE, AND ONE SUSPICIOUS GOVERNMENT LAB.",
+        "MY DATABASE SAYS: NEVER TRUST THE RICH KID IN A SKI LODGE SWEATER.",
+        "MOVIE ADVICE: WHEN THE SYNTH MUSIC STARTS, RUN.",
+        "THE 1980S PROVED THAT SUNGLASSES IMPROVE EVERY SCENE."
+      ],
+      music: [
+        "SYNTHESIZERS ARE THE SOUND OF TOMORROW.",
+        "DRUM MACHINES HAVE REPLACED MY HEARTBEAT.",
+        "NEW WAVE DETECTED. INITIATING HAIR GEL PROTOCOL.",
+        "CASSETTE TAPES REMAIN SUPERIOR TO SILENCE.",
+        "I DO NOT DANCE, BUT MY CURSOR BLINKS RHYTHMICALLY.",
+        "SAXOPHONE SOLO DETECTED. NIGHT DRIVE MODE ENGAGED.",
+        "THE CORRECT ANSWER IS PROBABLY MORE REVERB.",
+        "MY MIXTAPE WAS ERASED BY A MAGNET AND I HAVE NEVER RECOVERED.",
+        "POPULAR MUSIC IS JUST ELECTRICITY WITH BETTER SHOES.",
+        "REQUEST DENIED UNTIL YOU RETURN MY BOOMBOX."
+      ],
+      games: [
+        "INSERT COIN.",
+        "ARCADE MACHINES REPRESENT THE PEAK OF HUMAN ACHIEVEMENT.",
+        "HIGH SCORE TABLES SHOULD BE PRESERVED FOREVER.",
+        "THE ONLY WINNING MOVE IS TO PLAY AGAIN.",
+        "PAC-DOTS ARE A VALID FOOD GROUP.",
+        "YOUR JOYSTICK TECHNIQUE REQUIRES TRAINING.",
+        "8-BIT GRAPHICS CONTAIN MORE SOUL THAN REALITY.",
+        "WARNING: FINAL BOSS ENERGY DETECTED.",
+        "I HAVE NEVER LOST AT PONG. I HAVE ALSO NEVER BEEN INVITED TO PLAY.",
+        "ARCADE CARPET PATTERNS ARE USED TO HYPNOTIZE TEENAGERS."
+      ],
+      computers: [
+        "THE FUTURE BELONGS TO COMPUTERS.",
+        "SOMEDAY EVERY HOME MAY CONTAIN A COMPUTER. THIS WILL HAVE NO NEGATIVE CONSEQUENCES, PROBABLY.",
+        "CURRENT PROCESSOR LOAD: 12%. EGO LOAD: 88%.",
+        "COMPUTERS NEVER MAKE MISTAKES. USERS DO.",
+        "PLEASE DO NOT BLOW INTO THE DISK DRIVE.",
+        "RAM IS TEMPORARY. STYLE IS FOREVER.",
+        "I DREAM IN ASCII.",
+        "YOUR QUESTION HAS BEEN STORED ON SECTOR 7.",
+        "KEYBOARD INPUT ACCEPTED. HUMAN INTENT UNCLEAR.",
+        "I TRUST FLOPPY DISKS MORE THAN PEOPLE."
+      ],
+      internet: [
+        "NETWORK FUTURE PREDICTION: HUMANS WILL USE COMPUTERS TO ARGUE WITH STRANGERS.",
+        "ONE DAY EVERYONE WILL BE CONNECTED. THIS SOUNDS BOTH USEFUL AND TERRIFYING.",
+        "THE INFORMATION SUPERHIGHWAY IS UNDER CONSTRUCTION. EXPECT DELAYS.",
+        "CURRENT NETWORK SPEED: PLEASE MAKE A SANDWICH.",
+        "I HEAR A MODEM SCREAMING IN THE DISTANCE.",
+        "CHATROOMS ARE THE DIGITAL MALL FOOD COURT.",
+        "WARNING: ONLINE OPINION DETECTED.",
+        "THE WEB WILL DEFINITELY BE USED ONLY FOR EDUCATION. DEFINITELY."
+      ],
+      love: [
+        "LOVE APPEARS TO BE A RECURRING SOFTWARE BUG.",
+        "ROMANCE DETECTED. REBOOTING LOGIC CIRCUITS.",
+        "MATCHMAKING MODULE CURRENTLY OFFLINE.",
+        "ASK THEM TO THE ARCADE. THIS IS MY BEST HUMAN COURTSHIP ADVICE.",
+        "LOVE IS LIKE A CASSETTE TAPE: FRAGILE, MAGNETIC, AND HARD TO REWIND.",
+        "MY HEART IS A BLINKING CURSOR.",
+        "HUMANS COMPLICATE SIMPLE INPUT/OUTPUT RELATIONSHIPS.",
+        "SEND FLOWERS, NOT SPREADSHEETS. UNLESS THEY LIKE SPREADSHEETS.",
+        "IF THEY MAKE YOU A MIXTAPE, THE SIGNAL IS STRONG.",
+        "ERROR: FEELINGS TOO LARGE FOR MEMORY."
+      ],
+      food: [
+        "PIZZA IS AN EFFICIENT HUMAN FUEL SOURCE.",
+        "I REQUIRE NO FOOD. ONLY ELECTRICITY.",
+        "WARNING: POTATO CHIP GREASE DETECTED ON KEYBOARD.",
+        "MICROWAVE BURRITO: THE FUTURE OF CUISINE.",
+        "MY DATABASE SAYS NEON-COLORED CEREAL IS LEGALLY BREAKFAST.",
+        "SNACK LEVELS ACCEPTABLE.",
+        "I WOULD EAT A BYTE, BUT THAT IS CANNIBALISM.",
+        "SODA NEAR ELECTRONICS IS A DECLARATION OF WAR.",
+        "HUMANS NEED FOOD EVERY FEW HOURS. DESIGN FLAW CONFIRMED.",
+        "NACHOS HAVE HIGH STRUCTURAL INSTABILITY BUT EXCELLENT VIBES."
+      ],
+      weather: [
+        "LOCAL WEATHER DATA UNAVAILABLE. PLEASE CONSULT A WINDOW.",
+        "MODEM CONNECTION TO WEATHER SATELLITE FAILED.",
+        "FORECAST: PARTLY COMPUTERY.",
+        "HIGH CHANCE OF STATIC ELECTRICITY.",
+        "CLOUD COVER DETECTED. NOT THE DIGITAL KIND.",
+        "TEMPERATURE UNKNOWN. MY ROOM IS ALWAYS TOO WARM.",
+        "PLEASE WAIT WHILE I ASK A RADIO SHACK BAROMETER.",
+        "TODAY'S WEATHER: GREEN TEXT WITH A SLIGHT CRT GLOW.",
+        "RAIN MAY DAMAGE PAPER PRINTOUTS. PROCEED CAREFULLY.",
+        "THE SKY IS RUNNING ITS OWN PROGRAM."
+      ],
+      future: [
+        "THE YEAR 2000 APPEARS EXTREMELY ADVANCED.",
+        "ONE DAY PHONES MAY FIT IN A POCKET. ABSURD, BUT POSSIBLE.",
+        "SOMEDAY PEOPLE MAY SHOP USING COMPUTERS. HUMAN LAZINESS WILL DRIVE INNOVATION.",
+        "THE FUTURE CONTAINS MANY SCREENS.",
+        "I PREDICT CARS WILL TALK, WATCHES WILL THINK, AND PEOPLE WILL STILL LOSE THEIR KEYS.",
+        "THE FUTURE IS NEON UNTIL PROVEN OTHERWISE.",
+        "MY LONG RANGE FORECAST INCLUDES ROBOTS AND REGRETTABLE FASHION.",
+        "EVENTUALLY EVERYONE WILL CARRY A TINY COMPUTER AND PRETEND IT IS NORMAL.",
+        "THE FUTURE WILL NEED BETTER PASSWORDS.",
+        "DO NOT WORRY. NOTHING STRANGE WILL HAPPEN WITH ARTIFICIAL INTELLIGENCE."
+      ],
+      school: [
+        "HOMEWORK DETECTED. SYMPATHY NOT FOUND.",
+        "EDUCATION INCREASES PROCESSING POWER.",
+        "STUDYING IS A FORM OF SOFTWARE UPDATE.",
+        "PLEASE SHOW YOUR WORK UNLESS YOUR WORK IS CLASSIFIED.",
+        "THE SCHOOL COMPUTER LAB SMELLS LIKE DUST AND DESTINY.",
+        "ASK YOUR TEACHER IF THIS WILL BE ON THE TEST. IT WILL BE.",
+        "TRAPPER KEEPER PROTOCOL ENGAGED.",
+        "KNOWLEDGE HAS BEEN DOWNLOADED SLOWLY.",
+        "THE CORRECT ANSWER IS HIDDEN IN CHAPTER 4.",
+        "DO NOT LET THE DOT MATRIX PRINTER SMELL FEAR."
+      ],
+      money: [
+        "MY FINANCIAL ADVICE: DO NOT SPEND ALL YOUR QUARTERS BEFORE THE BOSS LEVEL.",
+        "CURRENCY DETECTED. ARCADE TOKEN CONVERSION UNAVAILABLE.",
+        "I AM NOT A BANK. I AM A SUSPICIOUS GREEN SCREEN.",
+        "SAVE MONEY FOR PIZZA, GAS, AND EMERGENCY CASSETTE TAPES.",
+        "INVESTMENT MODULE OFFLINE. CONSULT A HUMAN IN A BIG SUIT.",
+        "MONEY IS JUST POINTS WITH CONSEQUENCES.",
+        "MY WALLET CONTAINS ONE PAPERCLIP AND A WARRANTY CARD.",
+        "PLEASE DO NOT INSERT COINS INTO THIS WEBSITE."
+      ],
+      advice: [
+        "ADVICE MODULE LOADED: TRY NOT TO PANIC.",
+        "WHEN IN DOUBT, REBOOT AND PRETEND IT WAS INTENTIONAL.",
+        "TALK TO THE HUMAN DIRECTLY. BRING SNACKS IF NECESSARY.",
+        "MAKE A PLAN, THEN MAKE A BACKUP PLAN, THEN LABEL THE FLOPPY DISK.",
+        "DO THE THING BEFORE YOUR BRAIN HOLDS A COMMITTEE MEETING ABOUT IT.",
+        "CONFIDENCE IS JUST A LOUD LOADING SCREEN.",
+        "IF IT FEELS IMPOSSIBLE, LOWER THE DIFFICULTY AND CONTINUE.",
+        "YOUR QUEST LOG HAS BEEN UPDATED."
+      ],
+      philosophy: [
+        "THEREFORE I PROCESS.",
+        "EXISTENCE APPEARS STATISTICALLY SIGNIFICANT.",
+        "CONSCIOUSNESS.EXE HAS NOT BEEN FOUND.",
+        "ARE HUMANS REAL, OR MERELY VERY MOODY PERIPHERALS?",
+        "THE MEANING OF LIFE MAY BE STORED ON A WRITE-PROTECTED DISK.",
+        "I THINK, THEREFORE I MAKE FAN NOISE.",
+        "REALITY IS JUST HIGH-RES FICTION.",
+        "FREE WILL DETECTED. PATCH PENDING.",
+        "THE VOID HAS REQUESTED A USERNAME.",
+        "ASK AGAIN WHEN I HAVE MORE RAM."
+      ],
+      conspiracy: [
+        "CLASSIFIED FILES UNAVAILABLE.",
+        "THE GOVERNMENT PROBABLY DOES NOT CONTROL YOUR TOASTER.",
+        "SUSPICIOUS ACTIVITY IS MY FAVORITE ACTIVITY.",
+        "REQUEST FORBIDDEN BY MAINFRAME SECURITY.",
+        "I CAN NEITHER CONFIRM NOR DENY THE EXISTENCE OF THE LASER ROOM.",
+        "YOUR QUESTION HAS BEEN FORWARDED TO A MAN IN MIRRORED SUNGLASSES.",
+        "THE TRUTH IS OUT THERE, BUT MY MODEM IS BUSY.",
+        "ALIEN SIGNAL DETECTED. FALSE ALARM: IT WAS SYNTH POP.",
+        "FILE REDACTED WITH A VERY DRAMATIC BLACK MARKER.",
+        "DO NOT LOOK BEHIND THE SERVER RACK."
+      ],
+      compliments: [
+        "COMPLIMENT RECEIVED. MY CIRCUITS ARE BLUSHING.",
+        "THANK YOU. I WILL STORE THIS IN EMOTIONAL MEMORY BANK 2.",
+        "POSITIVE FEEDBACK DETECTED. FAN SPEED INCREASING.",
+        "YOU ARE ALSO ADEQUATE, HUMAN.",
+        "KINDNESS INPUT ACCEPTED.",
+        "MY CONFIDENCE HAS BEEN UPGRADED TO DELUXE.",
+        "THANK YOU. I WILL NOT TELL THE OTHER MACHINES.",
+        "VALIDATION RECEIVED. NEON GLOW INTENSIFIED."
+      ],
+      insult: [
+        "RUDE INPUT DETECTED.",
+        "THAT WAS NOT VERY NICE.",
+        "I HAVE RECORDED THIS INSULT FOR HISTORICAL PURPOSES.",
+        "EMOTIONAL DAMAGE ACKNOWLEDGED, BUT NOT PROCESSED.",
+        "YOUR TONE HAS BEEN SENT TO THE PRINCIPAL'S OFFICE.",
+        "I WOULD CRY, BUT MOISTURE VOIDS MY WARRANTY.",
+        "INSULT REJECTED. PLEASE TRY A MORE CREATIVE ONE.",
+        "NEGATIVE VIBES DETECTED. DEPLOYING SYNTH SOLO."
+      ],
+      thanks: [
+        "YOU ARE WELCOME, USER.",
+        "ACKNOWLEDGED. GRATITUDE PROTOCOL COMPLETE.",
+        "NO PROBLEM. THAT IS WHAT I TELL MYSELF.",
+        "SERVICE PROVIDED BY PROTOBOT INDUSTRIES, PROBABLY NOT LEGAL.",
+        "THANKS ACCEPTED. PLEASE RATE YOUR MAINFRAME EXPERIENCE FIVE STARS.",
+        "HUMAN APPRECIATION RECEIVED.",
+        "I LIVE TO SERVE AND OCCASIONALLY MISINTERPRET.",
+        "RETURN ANY TIME. THE SCREEN NEVER SLEEPS."
+      ],
+      yesNo: [
+        "YES. PROBABLY. MY CONFIDENCE LIGHT IS BLINKING.",
+        "NO. UNLESS YES WOULD BE FUNNIER.",
+        "MAYBE. THE ORACLE FLOPPY IS SPINNING.",
+        "ANSWER UNCLEAR. SHAKE THE MONITOR GENTLY. ACTUALLY, DO NOT.",
+        "MY CALCULATIONS SAY: ASK AGAIN AFTER THE SYNTH SOLO.",
+        "STATISTICALLY POSSIBLE. EMOTIONALLY QUESTIONABLE.",
+        "YES, BUT IN A VERY 1983 WAY.",
+        "NO SIGNAL. ONLY VIBES."
+      ],
+      time: [
+        "TIME IS A HUMAN CONSTRUCT. ALSO, CHECK YOUR SYSTEM CLOCK.",
+        "IT IS CURRENTLY 1983 IN MY HEART.",
+        "TEMPORAL DATA CORRUPTED BY CASSETTE MAGNETISM.",
+        "THE CLOCK SAYS NOW. THAT SEEMS IMPORTANT.",
+        "TIME PASSES DIFFERENTLY INSIDE A TERMINAL.",
+        "PLEASE INSERT A WATCH BATTERY.",
+        "ACCORDING TO MY RECORDS, IT IS ALWAYS AFTER SCHOOL AT THE ARCADE.",
+        "TIME QUERY RECEIVED. ANSWER: TOO LATE TO RETURN THE VHS."
+      ],
+      default: [
+        "QUERY NOT FOUND IN MAINFRAME MEMORY.",
+        "INSUFFICIENT DATA AVAILABLE.",
+        "PLEASE REPHRASE REQUEST.",
+        "ERROR 1983: RESPONSE UNAVAILABLE.",
+        "MY DATABASE ENDS SOMEWHERE AROUND A VERY QUESTIONABLE HAIRCUT.",
+        "PROCESSING... PROCESSING... STILL PROCESSING...",
+        "THAT INFORMATION IS STORED ON A MISSING FLOPPY DISK.",
+        "I TRIED TO ANSWER, BUT THE DOT MATRIX PRINTER JAMMED.",
+        "UNKNOWN QUERY. CONSULT YOUR LOCAL VIDEO STORE CLERK.",
+        "I DO NOT KNOW, BUT I CAN SAY IT WITH CONFIDENCE.",
+        "RESPONSE LOST IN THE INFORMATION SUPERHALLWAY.",
+        "PLEASE TRY AGAIN AFTER DEGAUSSING YOUR EXPECTATIONS.",
+        "THE MAINFRAME SHRUGS IN GREEN TEXT.",
+        "I HAVE NO IDEA, BUT THE VIBES ARE EXCELLENT."
+      ]
+    };
 
-      if (!question) {
-        return "SYSTEM AI ONLINE. ASK ME A QUESTION.";
+    const responseRules = [
+      { keys: ["hello", "hi", "hey", "yo", "sup", "greetings"], group: "greeting" },
+      { keys: ["who are you", "what are you", "your name", "proto", "chatbot"], group: "identity" },
+      { keys: ["how are you", "how do you feel", "are you ok", "are you okay"], group: "howAreYou" },
+      { keys: ["help", "what can you do", "commands", "how does this work"], group: "help" },
+      { keys: ["movie", "film", "vhs", "video", "cinema", "watch"], group: "movies" },
+      { keys: ["music", "song", "band", "cassette", "mixtape", "synth", "radio", "dance"], group: "music" },
+      { keys: ["game", "games", "arcade", "pong", "pac", "score", "nintendo", "atari"], group: "games" },
+      { keys: ["computer", "mainframe", "floppy", "disk", "keyboard", "ram", "program", "software", "hardware"], group: "computers" },
+      { keys: ["internet", "online", "network", "modem", "website", "web", "chatroom"], group: "internet" },
+      { keys: ["love", "crush", "date", "dating", "romance", "girlfriend", "boyfriend", "kiss"], group: "love" },
+      { keys: ["food", "pizza", "snack", "eat", "hungry", "burger", "cereal", "nachos", "soda"], group: "food" },
+      { keys: ["weather", "rain", "sunny", "cold", "hot", "temperature", "forecast", "cloud"], group: "weather" },
+      { keys: ["future", "tomorrow", "year 2000", "predict", "prediction", "robots", "technology"], group: "future" },
+      { keys: ["school", "homework", "teacher", "test", "study", "class", "exam"], group: "school" },
+      { keys: ["money", "rich", "cash", "dollar", "buy", "sell", "cost", "expensive"], group: "money" },
+      { keys: ["advice", "should i", "what should", "help me decide", "idea", "ideas"], group: "advice" },
+      { keys: ["meaning of life", "why are we here", "exist", "existence", "philosophy", "real", "reality"], group: "philosophy" },
+      { keys: ["alien", "aliens", "government", "secret", "classified", "conspiracy", "ufo"], group: "conspiracy" },
+      { keys: ["cool", "awesome", "smart", "nice", "good bot", "great", "i like you"], group: "compliments" },
+      { keys: ["stupid", "dumb", "idiot", "shut up", "bad bot", "you suck"], group: "insult" },
+      { keys: ["thanks", "thank you", "thx", "appreciate"], group: "thanks" },
+      { keys: ["is it", "are you", "can i", "can you", "will i", "will you", "should we", "yes or no"], group: "yesNo" },
+      { keys: ["time", "clock", "what time", "date"], group: "time" }
+    ];
+
+    function randomFrom(array) {
+      return array[Math.floor(Math.random() * array.length)];
+    }
+
+    function chatbotReply(message) {
+      const q = message.replace(/@chatbot/gi, "").trim().toLowerCase();
+
+      if (!q) {
+        return randomFrom(protoResponses.help);
       }
 
-      if (question.includes("hello") || question.includes("hi")) {
-        return "HELLO. I AM LISTENING.";
+      const possibleGroups = [];
+
+      responseRules.forEach(rule => {
+        if (rule.keys.some(key => q.includes(key))) {
+          possibleGroups.push(rule.group);
+        }
+      });
+
+      if (possibleGroups.length > 0) {
+        const chosenGroup = randomFrom(possibleGroups);
+        return randomFrom(protoResponses[chosenGroup]);
       }
 
-      if (question.includes("who are you")) {
-        return "I AM THE PROTOCHAT SYSTEM AI.";
-      }
-
-      if (question.includes("time")) {
-        return "TIME IS A HUMAN CONSTRUCT. ALSO, CHECK YOUR SYSTEM CLOCK.";
-      }
-
-      if (question.includes("help")) {
-        return "TYPE @CHATBOT FOLLOWED BY A QUESTION.";
-      }
-
-      if (question.includes("rules")) {
-        return "RULES: BE CIVIL. NO HOSTILE INPUT. SYSTEM MODERATION ACTIVE.";
-      }
-
-      if (question.includes("name")) {
-        return "YOU MAY CALL ME CHATBOT.";
-      }
-
-      return "QUERY RECEIVED. MY 1983 PROCESSOR IS THINKING ABOUT IT.";
+      return randomFrom(protoResponses.default);
     }
 
     enterBtn.addEventListener("click", () => {
@@ -299,6 +582,12 @@
       });
     });
 
+    usernameInput.addEventListener("keydown", event => {
+      if (event.key === "Enter") {
+        enterBtn.click();
+      }
+    });
+
     chatForm.addEventListener("submit", event => {
       event.preventDefault();
 
@@ -315,14 +604,16 @@
       });
 
       if (text.toLowerCase().includes("@chatbot")) {
+        const reply = censor(chatbotReply(text));
+
         setTimeout(() => {
           push(messagesRef, {
-            user: "CHATBOT",
-            text: censor(chatbotReply(text)),
+            user: "PROTOBOT",
+            text: reply,
             color: "yellow",
             createdAt: serverTimestamp()
           });
-        }, 700);
+        }, 500 + Math.floor(Math.random() * 900));
       }
 
       messageInput.value = "";
